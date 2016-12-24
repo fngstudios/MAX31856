@@ -19,6 +19,7 @@
 #define MAX31856_H
 
 #include "Arduino.h"
+#include <SPI.h>
 
 // MAX31856 Registers
 // Register 0x00: CR0
@@ -86,7 +87,7 @@ class	MAX31856
 {
 public:
     MAX31856(int, int, int, int);           // SDI, SDO, CS, CLK (DRDY and FAULT are not used)
-
+    MAX31856(int);                          // CS //Overloaded constructor to use hardware SPI port
     void    writeRegister(byte, byte);
     double  readThermocouple(byte unit);
     double  readJunction(byte unit);
@@ -96,6 +97,7 @@ private:
     void    writeByte(byte);
     double  verifyMAX31856();
     int     _sdi, _sdo, _cs, _clk;
+    bool    _hspi = 0;
     byte    _registers[NUM_REGISTERS];      // Shadow registers.  Registers can be restored if power to MAX31855 is lost
 };
 

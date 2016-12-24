@@ -66,6 +66,26 @@ MAX31856::MAX31856(int sdi, int sdo, int cs, int clk)
     for (int i=0; i<NUM_REGISTERS; i++)
         _registers[i] = reg[i];
 }
+MAX31856::MAX31856(int cs)
+{
+    _cs = cs;
+    _hspi = 1;
+
+
+    // Initialize all the data pins
+    pinMode(_cs, OUTPUT);
+
+    // Default output pins state
+    digitalWrite(_cs, HIGH);
+    SPI.setDataMode(SPI_MODE2);
+  	SPI.setClockDivider(SPI_CLOCK_DIV2);
+  	SPI.setBitOrder(MSBFIRST);
+  	SPI.begin();
+    // Set up the shadow registers with the default values
+    byte reg[NUM_REGISTERS] = {0x00,0x03,0xff,0x7f,0xc0,0x7f,0xff,0x80,0,0,0,0};
+    for (int i=0; i<NUM_REGISTERS; i++)
+        _registers[i] = reg[i];
+}
 
 
 // Write the given data to the MAX31856 register
@@ -136,7 +156,7 @@ double	MAX31856::readThermocouple(byte unit)
 
         // Convert to Celsius
         temperature = (double) data * 0.0078125;
-	
+
         // Convert to Fahrenheit if desired
         if (unit == FAHRENHEIT)
             temperature = (temperature * 9.0/5.0)+ 32;
@@ -198,7 +218,7 @@ double	MAX31856::readJunction(byte unit)
 
     // Convert to Celsius
     temperature *= 0.015625;
-	
+
     // Convert to Fahrenheit if desired
     if (unit == FAHRENHEIT)
         temperature = (temperature * 9.0/5.0)+ 32;
@@ -260,9 +280,10 @@ double MAX31856::verifyMAX31856()
 // microcontrollers
 long MAX31856::readData()
 {
+  if (!_hspi){
     long data = 0;
     unsigned long bitMask = 0x80000000;
-	
+
     // Shift in 32 bits of data
     while (bitMask)
     {
@@ -278,8 +299,23 @@ long MAX31856::readData()
 
         bitMask >>= 1;
     }
-	
+
     return(data);
+  }else{
+    unsigned char b3,b2,b1,b0;
+//    SPI.transfer(reg);
+//    delayMicroseconds(50);
+    b3=SPI.transfer(0x00);
+    delayMicroseconds(10);
+    b2=SPI.transfer(0x00);
+    delayMicroseconds(10);
+    b1=SPI.transfer(0x00);
+    delayMicroseconds(10);
+    b0=SPI.transfer(0x00);
+    delayMicroseconds(10);
+    disableChip();
+    return (unsigned long)b3<<24 | (unsigned long)b2<<16 | (unsigned long)b1<<8 | (unsigned long)b0;
+  }
 }
 
 
@@ -288,8 +324,9 @@ long MAX31856::readData()
 // microcontrollers
 void MAX31856::writeByte(byte data)
 {
-    byte bitMask = 0x80;
 
+  if (!_hspi){
+    byte bitMask = 0x80;
     // Shift out 8 bits of data
     while (bitMask)
     {
@@ -303,5 +340,7 @@ void MAX31856::writeByte(byte data)
 
         bitMask >>= 1;
     }
+  }else{
+    	SPI.transfer((unsigned char)data);
+  }
 }
-
